@@ -1,0 +1,63 @@
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const modelSelector = document.getElementById('model-selector');
+    const smartestModel = document.getElementById('smartest-model');
+    const smartestDescription = document.getElementById('smartest-description');
+    const backendUrl = 'https://ordinaryaibackend.onrender.com'; // Replace with Render URL
+
+    // Fetch models
+    fetch(`${backendUrl}/api/models`)
+      .then(response => response.json())
+      .then(models => {
+        const smartest = Object.values(models).reduce((prev, curr) =>
+          prev.score > curr.score ? prev : curr
+        );
+        smartestModel.textContent = smartest.name;
+        smartestDescription.textContent = smartest.description;
+      });
+
+    // Send message
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      const userMessage = document.createElement('div');
+      userMessage.className = 'message user-message';
+      userMessage.textContent = message;
+      chatBox.appendChild(userMessage);
+      userInput.value = '';
+
+      fetch(`${backendUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, model: modelSelector.value })
+      })
+        .then(response => response.json())
+        .then(data => {
+          const aiMessage = document.createElement('div');
+          aiMessage.className = 'message ai-message';
+          aiMessage.textContent = data.response || 'Error: No response';
+          chatBox.appendChild(aiMessage);
+          chatBox.scrollTop = chatBox.scrollHeight;
+        })
+        .catch(() => {
+          const aiMessage = document.createElement('div');
+          aiMessage.className = 'message ai-message';
+          aiMessage.textContent = 'Error: Failed to get response';
+          chatBox.appendChild(aiMessage);
+          chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    }
+  });
+</script>
