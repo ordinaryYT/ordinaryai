@@ -1,63 +1,115 @@
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const chatBox = document.getElementById('chat-box');
-    const userInput = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
-    const modelSelector = document.getElementById('model-selector');
-    const smartestModel = document.getElementById('smartest-model');
-    const smartestDescription = document.getElementById('smartest-description');
-    const backendUrl = 'https://ordinaryaibackend.onrender.com'; // Replace with Render URL
-
-    // Fetch models
-    fetch(`${backendUrl}/api/models`)
-      .then(response => response.json())
-      .then(models => {
-        const smartest = Object.values(models).reduce((prev, curr) =>
-          prev.score > curr.score ? prev : curr
-        );
-        smartestModel.textContent = smartest.name;
-        smartestDescription.textContent = smartest.description;
-      });
-
-    // Send message
-    sendBtn.addEventListener('click', sendMessage);
-    userInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    });
-
-    function sendMessage() {
-      const message = userInput.value.trim();
-      if (!message) return;
-
-      const userMessage = document.createElement('div');
-      userMessage.className = 'message user-message';
-      userMessage.textContent = message;
-      chatBox.appendChild(userMessage);
-      userInput.value = '';
-
-      fetch(`${backendUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, model: modelSelector.value })
-      })
-        .then(response => response.json())
-        .then(data => {
-          const aiMessage = document.createElement('div');
-          aiMessage.className = 'message ai-message';
-          aiMessage.textContent = data.response || 'Error: No response';
-          chatBox.appendChild(aiMessage);
-          chatBox.scrollTop = chatBox.scrollHeight;
-        })
-        .catch(() => {
-          const aiMessage = document.createElement('div');
-          aiMessage.className = 'message ai-message';
-          aiMessage.textContent = 'Error: Failed to get response';
-          chatBox.appendChild(aiMessage);
-          chatBox.scrollTop = chatBox.scrollHeight;
-        });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ordinary AI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #0b0c10;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-  });
-</script>
+    header {
+      background: #1f2833;
+      width: 100%;
+      padding: 1rem;
+      text-align: center;
+      font-size: 2rem;
+    }
+    select, button, input {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+    }
+    #chat {
+      max-width: 700px;
+      width: 100%;
+      margin: 1rem auto;
+      padding: 1rem;
+      background: #1f2833;
+      border-radius: 8px;
+      overflow-y: auto;
+      max-height: 60vh;
+    }
+    .msg { margin: 1rem 0; }
+    .user { color: #66fcf1; }
+    .ai { color: #c5c6c7; }
+    #leaderboard {
+      margin: 1rem;
+      background: #1f2833;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>🤖 Ordinary AI</header>
+
+  <section id="leaderboard">
+    <h2>📊 Smartest AI Models</h2>
+    <ol>
+      <li>OrdinaryAI3 (🧠 Smartest)</li>
+      <li>OrdinaryAI1</li>
+      <li>OrdinaryAI2</li>
+      <li>OrdinaryAI4</li>
+      <li>OrdinaryAI5</li>
+    </ol>
+  </section>
+
+  <div>
+    <select id="modelSelect">
+      <option value="ordinaryai1">OrdinaryAI1</option>
+      <option value="ordinaryai2">OrdinaryAI2</option>
+      <option value="ordinaryai3">OrdinaryAI3</option>
+      <option value="ordinaryai4">OrdinaryAI4</option>
+      <option value="ordinaryai5">OrdinaryAI5</option>
+    </select>
+    <input type="text" id="userInput" placeholder="Ask something..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <div id="chat"></div>
+
+  <script>
+    const modelMap = {
+      ordinaryai1: "openai/gpt-4o",
+      ordinaryai2: "anthropic/claude-3-sonnet",
+      ordinaryai3: "mistralai/mistral-7b-instruct",
+      ordinaryai4: "meta-llama/llama-3-70b-instruct",
+      ordinaryai5: "google/gemini-pro"
+    };
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const modelSelect = document.getElementById("modelSelect");
+      const chat = document.getElementById("chat");
+
+      const msg = input.value;
+      if (!msg) return;
+
+      const selectedModel = modelMap[modelSelect.value];
+
+      chat.innerHTML += `<div class="msg user"><b>You:</b> ${msg}</div>`;
+      input.value = "";
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: selectedModel, prompt: msg })
+        });
+
+        const data = await response.json();
+        chat.innerHTML += `<div class="msg ai"><b>Ordinary:</b> ${data.reply}</div>`;
+      } catch (err) {
+        chat.innerHTML += `<div class="msg ai"><b>Error:</b> Something went wrong.</div>`;
+      }
+    }
+  </script>
+</body>
+</html>
